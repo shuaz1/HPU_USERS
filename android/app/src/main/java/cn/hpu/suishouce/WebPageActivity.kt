@@ -2,24 +2,29 @@ package cn.hpu.suishouce
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.Gravity
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import org.json.JSONObject
 import org.json.JSONTokener
 
 /**
- * 应用内浏览器窗口：
+ * 应用内浏览器窗口（默认用电脑标识加载，顶部可切回手机版）：
  *  - browse：普通浏览（教务、seatlib、电费站、缴费、办事大厅）
- *  - login：等页面落到教务首页，抓一份 HTML 交给主页面解析课表
+ *  - login：先在统一认证登录，再跳到课表页，等课表画出来才抓
  *  - grades：注入 grade-scraper.js，自己翻页并把结果回传
  *  - free：打开空闲教室页并把条件预填好，由用户点「查询」
  */
@@ -44,6 +49,8 @@ class WebPageActivity : Activity() {
     }
 
     private lateinit var web: WebView
+    private var uaBtn: TextView? = null
+    private var desktopMode = true
     private var mode = "browse"
     private var sent = false
     private var scraperLoaded = false
@@ -55,17 +62,34 @@ class WebPageActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = 0xFF050D16.toInt()
-        window.navigationBarColor = 0xFF050D16.toInt()
+        window.statusBarColor = 0xFF0E2A22.toInt()
+        window.navigationBarColor = 0xFF0E2A22.toInt()
 
         mode = intent.getStringExtra("mode") ?: "browse"
         prefill = intent.getStringExtra("prefill") ?: ""
         val url = intent.getStringExtra("url") ?: "about:blank"
         val ua = intent.getStringExtra("ua") ?: "auto"
 
+        // 学校站点默认用电脑标识：手机版页面经常残缺，课表/成绩页本来就是按电脑排的；
+        // 只有图书馆座位（seatlib）是按手机竖屏做的，保持手机 UA
+        desktopMode = when (ua) {
+            "mobile" -> false
+            "desktop" -> true
+            else -> !Regex("seatlib\\.hpu\\.edu\\.cn").containsMatchIn(url)
+        }
+
+        val root = LinearLayout(this)
+        root.orientation = LinearLayout.VERTICAL
+        root.setBackgroundColor(0xFFF3F5F4.toInt())
+
+        if (mode == "browse" || mode == "free") {
+            root.addView(buildBar(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)))
+        }
+
         web = WebView(this)
-        web.setBackgroundColor(0xFFFFFFFF.toInt())
-        setContentView(web)
+        web.setBackgroundColor(Color.WHITE)
+        root.addView(web, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        setContentView(root)
 
         val s = web.settings
         s.javaScriptEnabled = true
@@ -76,11 +100,9 @@ class WebPageActivity : Activity() {
         s.displayZoomControls = false
         s.loadWithOverviewMode = true
         s.useWideViewPort = true
+        s.textZoom = 100
         s.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        s.userAgentString = when {
-            ua == "desktop" -> Http.DESKTOP_UA
-            else -> pickUa(url)
-        }
+        applyUa(false)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
 
         web.addJavascriptInterface(PageBus(), "HpuPage")
@@ -90,16 +112,93 @@ class WebPageActivity : Activity() {
 
             override fun onPageFinished(view: WebView?, u: String?) {
                 val at = u ?: return
+                if (desktopMode) forceDesktopViewport()
                 when (mode) {
                     "login" -> handleLogin(at)
                     "grades" -> if (!scraperLoaded) { scraperLoaded = true; loadScraper() }
                     "free" -> scheduleFill(at)
                 }
+                checkNotBlank(at)
             }
         }
 
         web.loadUrl(url)
     }
+
+    /* ---------------- 顶部工具条：电脑版 / 手机版、刷新、关闭 ---------------- */
+
+    private fun buildBar(): LinearLayout {
+        val bar = LinearLayout(this)
+        bar.orientation = LinearLayout.HORIZONTAL
+        bar.gravity = Gravity.CENTER_VERTICAL
+        bar.setBackgroundColor(0xFF0E2A22.toInt())
+
+        val btn = barButton(if (desktopMode) "电脑版" else "手机版") { toggleUa() }
+        uaBtn = btn
+        bar.addView(btn, LinearLayout.LayoutParams(dp(88), dp(44)))
+
+        val title = TextView(this)
+        title.text = intent.getStringExtra("title") ?: ""
+        title.setTextColor(0xFF9FB6AC.toInt())
+        title.textSize = 12f
+        title.gravity = Gravity.CENTER
+        title.maxLines = 1
+        bar.addView(title, LinearLayout.LayoutParams(0, dp(44), 1f))
+
+        bar.addView(barButton("刷新") { web.reload() }, LinearLayout.LayoutParams(dp(62), dp(44)))
+        bar.addView(barButton("关闭") { finish() }, LinearLayout.LayoutParams(dp(62), dp(44)))
+        return bar
+    }
+
+    private fun barButton(text: String, onClick: () -> Unit): TextView {
+        val tv = TextView(this)
+        tv.text = text
+        tv.setTextColor(0xFFE9D8A6.toInt())
+        tv.textSize = 13f
+        tv.gravity = Gravity.CENTER
+        tv.setPadding(dp(10), 0, dp(10), 0)
+        tv.setOnClickListener { onClick() }
+        return tv
+    }
+
+    private fun toggleUa() {
+        desktopMode = !desktopMode
+        uaBtn?.text = if (desktopMode) "电脑版" else "手机版"
+        applyUa(true)
+        toast(if (desktopMode) "已切换为电脑版" else "已切换为手机版")
+    }
+
+    private fun applyUa(reload: Boolean) {
+        web.settings.userAgentString = if (desktopMode) Http.DESKTOP_UA else WebSettings.getDefaultUserAgent(this)
+        if (reload) {
+            web.clearCache(false)
+            web.reload()
+        }
+    }
+
+    /** 电脑标识还不够：很多教务页没有 viewport，会按 980px 排版；这里强制按 1280 宽排 */
+    private fun forceDesktopViewport() {
+        web.evaluateJavascript(
+            "(function(){var m=document.querySelector('meta[name=viewport]');" +
+                "if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}" +
+                "m.content='width=1280';return 1})()", null
+        )
+    }
+
+    /** 整页几乎没文字时提示一下，免得用户在空白页干等 */
+    private fun checkNotBlank(at: String) {
+        handler.postDelayed({
+            if (isFinishing || sent) return@postDelayed
+            web.evaluateJavascript(
+                "(function(){var b=document.body;return b?b.innerText.replace(/\\s/g,'').length:0})()"
+            ) { raw ->
+                val n = unquote(raw).toIntOrNull() ?: 0
+                if (n < 20) toast("页面像是空白的，可点左上角切「手机版」再试")
+            }
+        }, 1500)
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     /** 教务抓页面用桌面 UA，手机站/认证站用系统默认（手机）UA */
     private fun pickUa(url: String): String {
@@ -115,7 +214,7 @@ class WebPageActivity : Activity() {
 
     /**
      * 登录流程分两步：先在认证页登录、落回教务首页；再跳到课表页，等课表渲染完才抓。
-     * 直接抓首页会拿到没有课表的空页面（这就是上一版"很快回到 App 却没数据"的原因）。
+     * 直接抓首页会拿到没有课表的空页面。
      */
     private fun handleLogin(at: String) {
         if (sent) return
