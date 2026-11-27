@@ -36,6 +36,13 @@ app.whenReady().then(async () => {
   const out = path.join(__dirname, '..', '预览图');
   fs.mkdirSync(out, { recursive: true });
 
+  // 回到页面顶部再拍
+  await win.webContents.executeJavaScript(`(() => {
+    document.querySelectorAll('.screens, #s-home, body, html').forEach(e => { if (e) e.scrollTop = 0; });
+    window.scrollTo(0, 0);
+  })()`, true);
+  await new Promise((r) => setTimeout(r, 500));
+
   const shot1 = await win.capturePage();
   fs.writeFileSync(path.join(out, '首页倒计时.png'), shot1.toPNG());
   console.log('shot1', shot1.toPNG().length);

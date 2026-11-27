@@ -723,6 +723,16 @@ html[data-theme="ink"]{
         </div>
       </div>
 
+      <div class="hero" id="homeHero">
+        <div class="hero-top"><span class="ht"><b>01</b>我的课表</span><span class="arr" id="homeGoTt">↗</span></div>
+        <div class="hdhead">
+          <b id="homeDayTitle">今天 · 第 13 周</b>
+          <span id="homeDayMeta">3 节课</span>
+        </div>
+        <div id="homeDayList" class="hdlist"></div>
+        <button class="btn mint" id="homeImport">导入课表</button>
+      </div>
+
       <div class="termbar" id="homeTermBar">
         <div class="tb-top"><b id="homeTermLabel">第 13 周 · 共 20 周</b><span id="homeTermLeft">还有 7 周</span></div>
         <div class="tb-track"><i id="homeTermFill" style="width:65%"></i></div>
@@ -732,16 +742,6 @@ html[data-theme="ink"]{
       <div class="card cdhome" id="homeCdCard">
         <div class="card-title"><h2>学业倒计时</h2><span class="more" id="cdEdit" style="cursor:pointer">编辑</span></div>
         <div id="cdList"></div>
-      </div>
-
-      <div class="hero" id="homeHero">
-        <div class="hero-top"><span class="ht"><b>01</b>我的课表</span><span class="arr" id="homeGoTt">↗</span></div>
-        <div class="hdhead">
-          <b id="homeDayTitle">今天 · 第 13 周</b>
-          <span id="homeDayMeta">3 节课</span>
-        </div>
-        <div id="homeDayList" class="hdlist"></div>
-        <button class="btn mint" id="homeImport">导入课表</button>
       </div>
 
       <div class="card sect" id="homeGradeCard" data-go="grades">
@@ -1086,7 +1086,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
   var $ = s => document.querySelector(s);
   var $$ = s => Array.from(document.querySelectorAll(s));
   // 版本号：改这两行，设置页/页脚/缓存标记一起变
-  var APP_VERSION = '1.1.1';
+  var APP_VERSION = '1.1.2';
   var APP_BUILD = '2026-11-27';
   var AUTHOR = '刷子';
   // 是否跑在桌面 WebView 壳里（壳注入 window.hpu）
