@@ -17,3 +17,5 @@ hpu-shell/debug/
 # 本地出包目录（APK、构建日志）
 dist/
 
+node_modules/
+

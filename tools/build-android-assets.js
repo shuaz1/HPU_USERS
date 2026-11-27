@@ -45,7 +45,7 @@ function transform(code, name) {
         babelrc: false,
         sourceType: 'script',
         compact: false,
-        presets: [[preset, { targets: { chrome: '49' }, modules: false, bugfixes: true }]]
+        presets: [[preset, { targets: { chrome: '49' }, modules: false }]]
       });
       return out && out.code ? out.code : code;
     } catch (e) {
