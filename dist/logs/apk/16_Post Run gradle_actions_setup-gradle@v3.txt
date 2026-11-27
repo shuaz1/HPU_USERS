@@ -1,0 +1,7 @@
+﻿2026-11-27T06:34:54.8524967Z Post job cleanup.
+2026-11-27T06:34:55.0098534Z In post-action step
+2026-11-27T06:34:55.0105915Z Cache is read-only: will not save state for use in subsequent builds.
+2026-11-27T06:34:55.0107366Z (node:3118) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-27T06:34:55.0108902Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-27T06:34:55.0113528Z Generating Job Summary
+2026-11-27T06:34:55.0129104Z Completed post-action step

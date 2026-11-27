@@ -21,9 +21,9 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # 有 esbuild 才能把 async/await 等语法降级到 chrome49，老 WebView 才不白屏
-      - name: Install esbuild
-        run: npm install --no-save esbuild
+      # Babel 才能把 async/await 真的降到 chrome49（esbuild 不做这件事）
+      - name: Install babel
+        run: npm install --no-save @babel/core @babel/preset-env
 
       - name: Build assets
         run: node tools/build-android-assets.js

@@ -1,0 +1,32 @@
+﻿2026-11-27T06:34:51.6843045Z ##[group]Run actions/upload-artifact@v4
+2026-11-27T06:34:51.6843423Z with:
+2026-11-27T06:34:51.6843653Z   name: hpu-release-apk
+2026-11-27T06:34:51.6843878Z   path: android/app/build/outputs/apk/release/*.apk
+2026-11-27T06:34:51.6844136Z   if-no-files-found: warn
+2026-11-27T06:34:51.6844332Z   compression-level: 6
+2026-11-27T06:34:51.6844511Z   overwrite: false
+2026-11-27T06:34:51.6844689Z   include-hidden-files: false
+2026-11-27T06:34:51.6844881Z env:
+2026-11-27T06:34:51.6845120Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-27T06:34:51.6845501Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-27T06:34:51.6845839Z   GRADLE_ACTION_ID: gradle/actions/setup-gradle
+2026-11-27T06:34:51.6846086Z   GRADLE_BUILD_ACTION_SETUP_COMPLETED: true
+2026-11-27T06:34:51.6846328Z   GRADLE_BUILD_ACTION_CACHE_RESTORED: true
+2026-11-27T06:34:51.6846675Z   DEVELOCITY_INJECTION_INIT_SCRIPT_NAME: gradle-actions.inject-develocity.init.gradle
+2026-11-27T06:34:51.6847106Z   DEVELOCITY_AUTO_INJECTION_CUSTOM_VALUE: gradle-actions
+2026-11-27T06:34:51.6847371Z   GITHUB_DEPENDENCY_GRAPH_ENABLED: false
+2026-11-27T06:34:51.6847589Z ##[endgroup]
+2026-11-27T06:34:51.8896513Z (node:3092) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-27T06:34:51.8897701Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-27T06:34:51.8973070Z With the provided path, there will be 1 file uploaded
+2026-11-27T06:34:51.9005619Z Artifact name is valid!
+2026-11-27T06:34:51.9021753Z Root directory input is valid!
+2026-11-27T06:34:52.2473720Z Beginning upload of artifact content to blob storage
+2026-11-27T06:34:52.2895052Z (node:3092) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-27T06:34:52.8312491Z Uploaded bytes 689060
+2026-11-27T06:34:52.8956844Z Finished uploading artifact content to blob storage!
+2026-11-27T06:34:52.8957970Z SHA256 digest of uploaded artifact zip is 5664009192ebd827eac2c0377859c52ead109213483a0a31bf18c891bf0efedc
+2026-11-27T06:34:52.8958907Z Finalizing artifact upload
+2026-11-27T06:34:53.2549721Z Artifact hpu-release-apk.zip successfully finalized. Artifact ID 15178050648
+2026-11-27T06:34:53.2552419Z Artifact hpu-release-apk has been successfully uploaded! Final size is 689060 bytes. Artifact ID is 15178050648
+2026-11-27T06:34:53.2556282Z Artifact download URL: https://github.com/shuaz1/HPU_USERS/actions/runs/45952521356/artifacts/15178050648

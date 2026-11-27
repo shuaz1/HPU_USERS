@@ -62,10 +62,10 @@ keytool -genkeypair -v -keystore hpu-release.jks -alias hpu \
 | 系统 | 能不能用 | 说明 |
 | --- | --- | --- |
 | Android 8.0+ | 完整 | 系统 WebView 一般 ≥ 60，配色、毛玻璃、间距都正常 |
-| Android 5.0–7.x | 能装，取决于 WebView | 系统 WebView 没更新到 Chrome 55+ 会白屏；构建时用 esbuild 按 chrome49 转译可绕过语法门槛，但很老的 WebView 仍可能掉色 |
+| Android 5.0–7.x | 需要 Babel 降级 | 打包时 `npm i @babel/core @babel/preset-env`，脚本会把 async/await、解构、对象展开降到 chrome49 语法；系统 WebView 低于 Chrome 55 本来会白屏，降级后才跑得动（esbuild 做不到这件事，它不降 async） |
 | Android 12+ | 完整 | color-mix 已全部改写成 rgba，不依赖新特性 |
 
-`minSdk = 21`，谁都能装；`targetSdk = 34`。
+`minSdk = 21`，谁都能装；`targetSdk = 34`。构建脚本会先试 Babel，没有再退 esbuild，都没有就原样拷贝（拷贝时只保证 Chrome 55+）。
 
 ## 五、已知限制（如实写）
 
