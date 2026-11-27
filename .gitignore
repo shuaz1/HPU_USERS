@@ -13,3 +13,7 @@ hpu-shell/debug/
 # 签名与密钥，绝不能进仓库
 *.jks
 *.keystore
+
+# 本地出包目录（APK、构建日志）
+dist/
+
