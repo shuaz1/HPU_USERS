@@ -430,6 +430,16 @@ body{
 .cd .r b{font-family:"Cascadia Mono",Consolas,monospace;font-size:19px;color:var(--blue)}
 .cd .r small{font-size:9px;color:var(--dim);margin-left:2px}
 
+/* 首页：学业倒计时条 */
+.cdhome{padding:13px 15px 5px}
+.cdhome .cdbig{display:flex;align-items:baseline;gap:8px;margin:2px 0 8px}
+.cdhome .cdbig b{font-family:"Cascadia Mono",Consolas,monospace;font-size:33px;line-height:1.1;color:var(--gold);font-weight:600}
+.cdhome .cdbig small{font-size:10px;color:var(--dim)}
+.cdhome .cdbig span{margin-left:auto;font-size:11.5px;color:var(--text);text-align:right}
+.cdhome .cd{padding:9px 0}
+.cdhome .cd .r b{font-size:16px;color:var(--mint)}
+.cdhome .cdempty{font-size:11.5px;color:var(--dim);padding:4px 0 10px}
+
 .menu{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;
   border-bottom:1px solid rgba(var(--track-rgb), 0.45);font-size:13px}
 .menu:last-child{border-bottom:none}
@@ -720,6 +730,11 @@ html[data-theme="ink"]{
         <div class="tb-foot"><span>开学 9/3</span><span>期末</span></div>
       </div>
 
+      <div class="card cdhome" id="homeCdCard">
+        <div class="card-title"><h2>学业倒计时</h2><span class="more" id="cdEdit" style="cursor:pointer">编辑</span></div>
+        <div id="cdList"></div>
+      </div>
+
       <div class="hero" id="homeHero">
         <div class="hero-top"><span class="ht"><b>01</b>我的课表</span><span class="arr" id="homeGoTt">↗</span></div>
         <div class="hdhead">
@@ -917,11 +932,6 @@ html[data-theme="ink"]{
       </div>
 
       <div class="card">
-        <div class="card-title"><h2>学业倒计时</h2><span class="more" id="cdEdit" style="cursor:pointer">编辑</span></div>
-        <div id="cdList"></div>
-      </div>
-
-      <div class="card">
         <div class="card-title"><h2>数据来源</h2><span class="more">默认 App 内处理 · 跳转可选</span></div>
         <div class="menu">
           <div class="l"><span class="dot"></span>综合教务（课表 / 成绩）</div>
@@ -1064,7 +1074,7 @@ html[data-theme="ink"]{
   const $ = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   // 版本号：改这两行，设置页/页脚/缓存标记一起变
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.1.1';
   const APP_BUILD = '2026-11-27';
   const AUTHOR = '刷子';
   // 是否跑在桌面 WebView 壳里（壳注入 window.hpu）
@@ -3331,19 +3341,35 @@ html[data-theme="ink"]{
   });
   renderTodos();
 
-  /* ---------- 学业倒计时（按今天实时算） ---------- */
+  /* ---------- 学业倒计时（首页，按今天实时算） ---------- */
   function renderCd(){
+    const box = $('#cdList');
+    if(!box) return;
     const t0 = new Date(); t0.setHours(0,0,0,0);
-    const rows = (S.countdown || []).slice().sort((a,b) => String(a.d).localeCompare(String(b.d)));
-    $('#cdList').innerHTML = rows.map(x => {
-      const days = Math.round((new Date(String(x.d).replace(/-/g,'/')) - t0) / 86400000);
-      const left = isNaN(days) ? '—' : (days > 0 ? days : 0);
-      const sub = isNaN(days) ? x.d : (days > 0 ? `${x.d} 还有 ${days} 天` : `${x.d} 已过`);
-      return `<div class="cd">
-        <div class="l"><h4>${x.n}</h4><p>${sub}</p></div>
-        <div class="r"><b>${left}</b><small>天</small></div>
+    const rows = (S.countdown || []).slice()
+      .filter(x => x && x.n && /^\d{4}-\d{2}-\d{2}$/.test(x.d || ''))
+      .sort((a,b) => String(a.d).localeCompare(String(b.d)));
+    if(!rows.length){
+      box.innerHTML = '<div class="cdempty">还没设置倒计时，点右上角「编辑」加一条（如：期末考试周、四六级、毕业）。</div>';
+      return;
+    }
+    const daysOf = x => Math.round((new Date(String(x.d).replace(/-/g,'/')) - t0) / 86400000);
+    // 还没到的最近一条放大显示；全过期了就显示最后一条
+    let head = rows.find(x => daysOf(x) > 0) || rows[rows.length - 1];
+    const headDays = daysOf(head);
+    const rest = rows.filter(x => x !== head);
+    box.innerHTML =
+      `<div class="cdbig">
+        <b>${headDays > 0 ? headDays : 0}</b><small>天</small>
+        <span>${headDays > 0 ? '距' : '已过'}${escHtml(head.n)}<br><em style="color:var(--dim);font-size:10px">${head.d}</em></span>
+      </div>` +
+      rest.map(x => {
+        const days = daysOf(x);
+        return `<div class="cd">
+        <div class="l"><h4>${escHtml(x.n)}</h4><p>${x.d} ${days > 0 ? '还有 ' + days + ' 天' : '已过'}</p></div>
+        <div class="r"><b>${days > 0 ? days : 0}</b><small>天</small></div>
       </div>`;
-    }).join('') || '<div class="notice" style="color:var(--dim)">还没有设置倒计时。</div>';
+      }).join('');
   }
   renderCd();
 
@@ -3484,6 +3510,7 @@ html[data-theme="ink"]{
     const wk = '日一二三四五六'[now.getDay()];
     $('#homeDate').textContent = `${now.getMonth()+1}月${now.getDate()}日 · 周${wk} · 把日常装进口袋`;
     renderTermBar();
+    if(typeof renderCd === 'function') renderCd();
     const todayIdx = now.getDay() === 0 ? 7 : now.getDay();
     const today = activeCourses(todayIdx, curWeek).slice().sort((a, b) => String(a.t).localeCompare(String(b.t)));
     $('#homeDayTitle').textContent = `今天 · 周${wk} · 第 ${curWeek} 周`;
