@@ -798,25 +798,8 @@ html[data-theme="ink"]{
         <div class="card" id="courseList"></div>
       </div>
 
-      <div class="card flat" id="freeCard">
-        <div class="card-title"><h2>空闲教室查询</h2><span class="more" id="frMeta">教务 · 实时</span></div>
-        <div class="field"><span>校区</span><select id="frCampus"></select></div>
-        <div class="field"><span>教学楼</span><select id="frBuilding"></select></div>
-        <div class="field"><span>教室类型</span><select id="frType"></select></div>
-        <div class="field"><span>日期</span><input id="frDate" type="date"></div>
-        <div class="field inline"><span>时间</span>
-          <input id="frFrom" type="time" value="08:00" style="flex:1"><em style="opacity:.6">—</em><input id="frTo" type="time" value="09:40" style="flex:1">
-        </div>
-        <div class="field inline"><span>容量≥</span><input id="frCap" type="number" min="0" placeholder="不限"></div>
-        <div class="btn-row" style="margin-top:10px">
-          <button class="btn solid sm" id="frQuery">查询</button>
-          <button class="btn ghost sm" id="frOpen">打开教务原页面</button>
-        </div>
-        <div id="frNote" style="margin-top:10px;font-size:11px;color:var(--dim);line-height:1.8">在应用内打开教务的空闲教室页，条件会先填好，再在页面里点「查询」。首次要先登录一次统一认证。</div>
-      </div>
-
       <button class="btn solid" id="importCourse" style="margin-top:4px">导入课表</button>
-      <div class="notice" style="text-align:center">本地解析：PDF / 网页文件 / JSON / 粘贴；自动抓取需原生 App 壳，导入后写入本机缓存</div>
+      <div class="notice" style="text-align:center">本地解析：Word(.docx) / JSON；也可在教务系统登录自动取回，导入后写入本机缓存</div>
       <button class="btn ghost" id="openJw1">统一认证登录 · 取回课表</button>
     </section>
 
@@ -1074,71 +1057,26 @@ html[data-theme="ink"]{
 </div>
 </div>
 
-<script type="text/plain" id="bmCode">javascript:(function(){
-if(document.getElementById('hpuFloatBtn')){alert('悬浮按钮已存在，直接点击即可');return;}
-var b=document.createElement('div');b.id='hpuFloatBtn';b.textContent='导入校园助手';
-b.style.cssText='position:fixed;right:18px;bottom:28px;z-index:99999;padding:12px 18px;background:#0aa5ff;color:#fff;border-radius:24px;font:14px/1.4 sans-serif;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35)';
-b.onclick=function(){
-try{
-var DAY={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':7};
-var CN={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12};
-var PT={1:['08:00','08:45'],2:['08:55','09:40'],3:['10:00','10:45'],4:['10:55','11:40'],5:['11:50','12:35'],6:['14:30','15:15'],7:['15:25','16:10'],8:['16:30','17:15'],9:['17:25','18:10'],10:['19:00','19:45'],11:['19:55','20:40']};
-function wrs(s){var out=[];if(!s)return null;String(s).replace(/第|周/g,'').split(/[,，、;；\s]+/).forEach(function(g){if(!g)return;var m=g.match(/(\d{1,2})\s*[-—~]\s*(\d{1,2})/);if(m)out.push([+m[1],+m[2]]);else{var n=g.match(/(\d{1,2})/);if(n)out.push([+n[0],+n[0]]);}});return out.length?out:null;}
-var tbl=null,ts=document.querySelectorAll('table');
-for(var i=0;i<ts.length;i++){var t=ts[i].innerText;if(/星期一/.test(t)&&/节次|周次/.test(t)){tbl=ts[i];break;}}
-if(!tbl){alert('未找到课表表格，请进入「个人课表」页再点');return;}
-var rows=tbl.rows,hi=-1;
-for(i=0;i<rows.length;i++){if(/星期一/.test(rows[i].innerText)){hi=i;break;}}
-if(hi<0){alert('未找到星期表头');return;}
-var head=rows[hi].cells,days=[],total=head.length;
-for(i=0;i<total;i++){var m=head[i].innerText.match(/星期([一二三四五六日])/);days[i]=m?DAY[m[1]]:null;}
-var pend=[],out=[],curP=0;
-for(var r=hi+1;r<rows.length;r++){
-var cells=rows[r].cells,ci=0;
-for(var c=0;c<total;c++){
-if(pend[c]&&pend[c].left>0){pend[c].left--;for(var q=0;q<pend[c].refs.length;q++){if(PT[curP])pend[c].refs[q].e=PT[curP][1];}continue;}
-var cell=cells[ci++];if(!cell)continue;
-var txt=(cell.innerText||'').trim();
-var pm=txt.match(/第([一二三四五六七八九十]+)节/);if(pm&&CN[pm[1]])curP=CN[pm[1]];
-var day=days[c];if(!day||!txt)continue;
-var re=/([^\n(（]+?)\s*\n?\s*[（(](\d{6,}[.\d]*)[)）]\s*\n?\s*[（(]([^)（()\n]*)[)）]\s*\n?\s*[（(]([^)（()]*)[)）]/g,m2,made=[];
-while((m2=re.exec(txt))){
-var n=m2[1].trim();if(!n||n.length>40)continue;
-var wkRoom=m2[4],k=wkRoom.search(/[,，]/),wk=k>=0?wkRoom.slice(0,k):wkRoom,room=k>=0?wkRoom.slice(k+1).trim():'';
-made.push({n:n,code:m2[2],y:m2[3].trim()||'待定',r:room||'待定',t:PT[curP]?PT[curP][0]:'08:00',e:PT[curP]?PT[curP][1]:'09:40',day:day,wrs:wrs(wk),wt:/单/.test(wk)?'odd':(/双/.test(wk)?'even':'all')});
-}
-if(cell.rowSpan>1)pend[c]={left:cell.rowSpan-1,refs:made};
-out=out.concat(made);
-}
-}
-if(!out.length){alert('未解析到课程，当前页面可能不是个人课表');return;}
-if(window.opener){window.opener.postMessage({type:'HPU_COURSES',list:out},'*');b.textContent='已回传 '+out.length+' 条到 App';b.style.background='#12c48b';}
-else{var blob=new Blob([JSON.stringify(out)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='courses.json';a.click();b.textContent='已导出 courses.json（请回 App 导入）';}
-}catch(e){alert('抓取失败：'+e.message);}
-};
-document.body.appendChild(b);
-})();</script>
 
-<script>function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(typeof e + " is not iterable"); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var r, e, o = "function" == typeof Symbol ? Symbol : {}, n = o.iterator || "@@iterator", a = o.toStringTag || "@@toStringTag"; function i(o, n, a, i) { var u = n && n.prototype instanceof Generator ? n : Generator, f = Object.create(u.prototype); return _regeneratorDefine2(f, "_invoke", function (t, o, n) { var a, i, u, f = 0, p = n || [], y = !1, G = { p: 0, n: 0, v: r, a: l, f: l.bind(r, 4), d: function d(t, e) { return a = t, i = 0, u = r, G.n = e, c; } }; function l(t, o) { for (i = t, u = o, e = 0; !y && f && !n && e < p.length; e++) { var n, a = p[e], l = G.p, F = a[2]; t > 3 ? (n = F === o) && (u = a[(i = a[4]) ? 5 : (i = 3, 3)], a[4] = a[5] = r) : a[0] <= l && ((n = t < 2 && l < a[1]) ? (i = 0, G.v = o, G.n = a[1]) : l < F && (n = t < 3 || a[0] > o || o > F) && (a[4] = t, a[5] = o, G.n = F, i = 0)); } if (n || t > 1) return c; throw y = !0, o; } return function (n, p, F) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && l(p, F), i = p, u = F; (e = i < 2 ? r : u) || !y;) { a || (i ? (i > 1 && (G.n = i < 3 ? -1 : u), l(i, u)) : G.v = u); try { if (f = 2, a) { if (i || (n = "next"), e = a[n]) { if (!(e = e.call(a, u))) throw TypeError("iterator result is not an object"); if (!e.done) return e; u = e.value, i < 2 && (i = 0); } else 1 === i && (e = a.return) && e.call(a), i < 2 && (u = TypeError("The iterator does not provide a '" + n + "' method"), i = 1); a = r; } else if ((e = (y = G.n < 0) ? u : t.call(o, G)) !== c) break; } catch (t) { a = r, i = 1, u = t; } finally { f = 1; } } return { value: e, done: y }; }; }(o, a, i), !0), f; } var c = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} e = Object.getPrototypeOf; var u = [][n] ? e(e([][n]())) : (_regeneratorDefine2(e = {}, n, function () { return this; }), e), f = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(u); function p(r) { return Object.setPrototypeOf ? Object.setPrototypeOf(r, GeneratorFunctionPrototype) : (r.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(r, a, "GeneratorFunction")), r.prototype = Object.create(f), r; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(f, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, a, "GeneratorFunction"), _regeneratorDefine2(f), _regeneratorDefine2(f, a, "Generator"), _regeneratorDefine2(f, n, function () { return this; }), _regeneratorDefine2(f, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: p }; })(); }
+<script>function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var r, e, o = "function" == typeof Symbol ? Symbol : {}, n = o.iterator || "@@iterator", a = o.toStringTag || "@@toStringTag"; function i(o, n, a, i) { var u = n && n.prototype instanceof Generator ? n : Generator, f = Object.create(u.prototype); return _regeneratorDefine2(f, "_invoke", function (t, o, n) { var a, i, u, f = 0, p = n || [], y = !1, G = { p: 0, n: 0, v: r, a: l, f: l.bind(r, 4), d: function d(t, e) { return a = t, i = 0, u = r, G.n = e, c; } }; function l(t, o) { for (i = t, u = o, e = 0; !y && f && !n && e < p.length; e++) { var n, a = p[e], l = G.p, F = a[2]; t > 3 ? (n = F === o) && (u = a[(i = a[4]) ? 5 : (i = 3, 3)], a[4] = a[5] = r) : a[0] <= l && ((n = t < 2 && l < a[1]) ? (i = 0, G.v = o, G.n = a[1]) : l < F && (n = t < 3 || a[0] > o || o > F) && (a[4] = t, a[5] = o, G.n = F, i = 0)); } if (n || t > 1) return c; throw y = !0, o; } return function (n, p, F) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && l(p, F), i = p, u = F; (e = i < 2 ? r : u) || !y;) { a || (i ? (i > 1 && (G.n = i < 3 ? -1 : u), l(i, u)) : G.v = u); try { if (f = 2, a) { if (i || (n = "next"), e = a[n]) { if (!(e = e.call(a, u))) throw TypeError("iterator result is not an object"); if (!e.done) return e; u = e.value, i < 2 && (i = 0); } else 1 === i && (e = a.return) && e.call(a), i < 2 && (u = TypeError("The iterator does not provide a '" + n + "' method"), i = 1); a = r; } else if ((e = (y = G.n < 0) ? u : t.call(o, G)) !== c) break; } catch (t) { a = r, i = 1, u = t; } finally { f = 1; } } return { value: e, done: y }; }; }(o, a, i), !0), f; } var c = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} e = Object.getPrototypeOf; var u = [][n] ? e(e([][n]())) : (_regeneratorDefine2(e = {}, n, function () { return this; }), e), f = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(u); function p(r) { return Object.setPrototypeOf ? Object.setPrototypeOf(r, GeneratorFunctionPrototype) : (r.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(r, a, "GeneratorFunction")), r.prototype = Object.create(f), r; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(f, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, a, "GeneratorFunction"), _regeneratorDefine2(f), _regeneratorDefine2(f, a, "Generator"), _regeneratorDefine2(f, n, function () { return this; }), _regeneratorDefine2(f, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: p }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(r) { for (var t = 1; t < arguments.length; t++) { var o = null != arguments[t] ? arguments[t] : {}; t % 2 ? ownKeys(Object(o), !0).forEach(function (t) { _defineProperty(r, t, o[t]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(r, Object.getOwnPropertyDescriptors(o)) : ownKeys(Object(o)).forEach(function (e) { Object.defineProperty(r, e, Object.getOwnPropertyDescriptor(o, e)); }); } return r; }
 function _defineProperty(r, t, o) { return (t = _toPropertyKey(t)) in r ? Object.defineProperty(r, t, { value: o, enumerable: !0, configurable: !0, writable: !0 }) : r[t] = o, r; }
 function _toPropertyKey(r) { var o = _toPrimitive(r, "string"); return "symbol" == typeof o ? o : o + ""; }
 function _toPrimitive(t, e) { if ("object" != typeof t || !t) return t; var r; if ("undefined" != typeof Symbol && void 0 !== (r = t[Symbol.toPrimitive])) { var i = r.call(t, e || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === e ? String : Number)(t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _slicedToArray(e, i) { return _iterableToArrayLimit(e, i) || _unsupportedIterableToArray(e, i) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(t, e) { if (t) { if ("string" == typeof t) return _arrayLikeToArray(t, e); var o = {}.toString.call(t).slice(8, -1); return "Object" === o && t.constructor && (o = t.constructor.name), "Map" === o || "Set" === o ? Array.from(t) : "Arguments" === o || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(o) ? _arrayLikeToArray(t, e) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (Array.isArray(r) && (null == e || e === ("undefined" != typeof Symbol && [][Symbol.iterator]) || e === []["@@iterator"])) return r; if (null != e) { var l, n, i, a, u = [], o = !0, f = !1; try { if (i = (e = e.call(r)).next, 0 === t) { if (Object(e) !== e) return; o = !1; } else for (; !(o = (l = i.call(e)).done) && (u.push(l.value), u.length !== t); o = !0); } catch (r) { f = !0, n = r; } finally { try { if (!o && null != e.return && (a = e.return(), Object(a) !== a)) return; } finally { if (f) throw n; } } return u; } }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (_$ => {
   var $ = s => document.querySelector(s);
   var $$ = s => Array.from(document.querySelectorAll(s));
   // 版本号：改这两行，设置页/页脚/缓存标记一起变
-  var APP_VERSION = '1.0.9';
+  var APP_VERSION = '1.1.0';
   var APP_BUILD = '2026-11-27';
   var AUTHOR = '刷子';
   // 是否跑在桌面 WebView 壳里（壳注入 window.hpu）
@@ -1179,8 +1117,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     // 电费查询站首页
     power: 'http://183.169.255.4:8080/Default.aspx',
     // 电费查询站（只读查询）
-    free: 'https://zhjw.hpu.edu.cn/eams/classroom/apply/std-activity.action',
-    // 公共服务 · 空闲教室查询（唯一走得通的入口地址，free!index 直连会报「出错了」）
+    /* 空闲教室功能已下线（教务侧筛选条件不可靠，页面只认容量，删除该入口） */
     pay: 'http://pay.hpu.edu.cn/paygateway/',
     // 缴费平台（仅 http）
     portal: 'https://zhlg.hpu.edu.cn/hnlg_portal/service_phone' // 办事大厅服务列表
@@ -1198,7 +1135,6 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
   var WV_BLOCKED = {
     [LINKS.jw]: '教务系统禁止被第三方页面嵌入（X-Frame-Options: SAMEORIGIN），网页原型内无法直接登录并读取课表；需在原生 App 的 WebView 壳内完成登录态注入与回传。',
     [LINKS.cas]: '统一身份认证与教务系统禁止被第三方页面嵌入（X-Frame-Options: SAMEORIGIN）；在桌面壳的应用内窗口里登录即可，这里只做浏览，不读取课表或成绩。',
-    [LINKS.free]: '空闲教室查询在教务内网页面里（X-Frame-Options: SAMEORIGIN），网页原型嵌不进来；桌面壳会直接打开原页面。',
     [LINKS.seat]: '座位预约系统（seatlib）同样限定自身页面引用（X-Frame-Options: SAMEORIGIN），登录走统一身份认证。原生壳里可以直接内嵌并保留登录态；网页原型下请点「在浏览器打开」完成预约。'
   };
   function openWebview(url, title) {
@@ -1515,15 +1451,109 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     if ($('#verRow')) $('#verRow').textContent = `${full} · ${APP_BUILD}`;
     if ($('#footVer')) $('#footVer').textContent = `${full} · ${APP_BUILD}`;
   }
+
+  /* ---------- 版本一致性校验：与 GitHub 最新 tag 不一致则锁定 ---------- */
+  var GH_REPO = 'shuaz1/HPU_USERS';
+  function verParts(v) {
+    return String(v || '').replace(/^[vV]/, '').trim().split(/[.\-]/).map(n => Number(n) || 0);
+  }
+  function verCmp(a, b) {
+    var A = verParts(a),
+      B = verParts(b);
+    for (var i = 0; i < Math.max(A.length, B.length); i++) {
+      var x = A[i] || 0,
+        y = B[i] || 0;
+      if (x !== y) return x < y ? -1 : 1;
+    }
+    return 0;
+  }
+  function checkAppVersion() {
+    return _checkAppVersion.apply(this, arguments);
+  }
+  function _checkAppVersion() {
+    _checkAppVersion = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+      var latest, t, arr, r, j, _t2;
+      return _regenerator().w(function (_context6) {
+        while (1) switch (_context6.p = _context6.n) {
+          case 0:
+            if (!(typeof fetch === 'undefined')) {
+              _context6.n = 1;
+              break;
+            }
+            return _context6.a(2);
+          case 1:
+            latest = '';
+            _context6.p = 2;
+            _context6.n = 3;
+            return fetch(`https://api.github.com/repos/${GH_REPO}/tags?per_page=1`, {
+              headers: {
+                Accept: 'application/vnd.github+json'
+              }
+            });
+          case 3:
+            t = _context6.v;
+            if (!t.ok) {
+              _context6.n = 5;
+              break;
+            }
+            _context6.n = 4;
+            return t.json();
+          case 4:
+            arr = _context6.v;
+            latest = arr && arr[0] ? arr[0].name : '';
+          case 5:
+            if (latest) {
+              _context6.n = 8;
+              break;
+            }
+            _context6.n = 6;
+            return fetch(`https://api.github.com/repos/${GH_REPO}/releases/latest`, {
+              headers: {
+                Accept: 'application/vnd.github+json'
+              }
+            });
+          case 6:
+            r = _context6.v;
+            if (!r.ok) {
+              _context6.n = 8;
+              break;
+            }
+            _context6.n = 7;
+            return r.json();
+          case 7:
+            j = _context6.v;
+            latest = j.tag_name || '';
+          case 8:
+            _context6.n = 10;
+            break;
+          case 9:
+            _context6.p = 9;
+            _t2 = _context6.v;
+            return _context6.a(2);
+          case 10:
+            // 离线 / 私有库无凭据：不拦截
+            if (latest && verCmp(latest, APP_VERSION) !== 0) lockVersion(latest);
+          case 11:
+            return _context6.a(2);
+        }
+      }, _callee6, null, [[2, 9]]);
+    }));
+    return _checkAppVersion.apply(this, arguments);
+  }
+  function lockVersion(latest) {
+    if ($('#verLock')) return;
+    var ov = document.createElement('div');
+    ov.id = 'verLock';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#050d16;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center';
+    ov.innerHTML = '<div style="font-size:18px;font-weight:700;color:#E9D8A6;margin-bottom:14px">版本不一致</div>' + '<div style="font-size:13px;line-height:2;color:#E9EDE8">当前版本 v' + APP_VERSION + '<br>GitHub 最新版本 ' + latest + '<br>请更新到最新版后再使用。</div>';
+    document.body.appendChild(ov);
+  }
   function openThanks() {
     openSheet(`
-      <h3>制作不易</h3>
-      <div style="font-size:13px;line-height:2;color:var(--text)">
-        一个学生自己写的校园小工具：课表、成绩、电费、座位都收在一处。<br>
-        不做代收缴费，不把数据传服务器，账号密码只留在你手机里。<br>
-        觉得好用，转给同班同学就行。
+      <h3>橙子</h3>
+      <div style="font-size:14px;line-height:2;color:var(--text);text-align:center">
+        刷子制作不易<br>祝你生活愉快
       </div>
-      <div style="margin:16px 0 4px;font-size:12px;color:var(--dim);letter-spacing:2px">—— ${AUTHOR}</div>
       <button class="btn solid" id="thxOk" style="margin-top:12px">知道了</button>
     `);
     $('#thxOk').addEventListener('click', () => {
@@ -1536,12 +1566,11 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
       <h3>使用说明</h3>
       <div style="font-size:12.5px;line-height:2;color:var(--text)">
         1. 先在首页填好学号、姓名、密码；只保存学号和姓名，密码不落盘。<br>
-        2. 课表：课表页「导入课表」支持粘贴、PDF / 网页文件 / JSON；也可走统一认证自动取回。<br>
+        2. 课表：课表页「导入课表」支持 Word(.docx) / JSON，也可走教务系统登录自动取回。<br>
         3. 成绩：成绩页点同步，从教务抓取，自动翻页，结果存本机。<br>
-        4. 空闲教室：选好校区、教学楼、类型、容量和时间，打开教务页面后点「查询」。<br>
-        5. 电费：宿舍页选楼栋楼层房间，读取余额；只读，不代收充值。<br>
-        6. 座位：图书馆页打开座位系统，登录后选座。<br>
-        7. 数据都在本机缓存里；换手机重新填写即可，卸载后清空。
+        4. 电费：宿舍页选楼栋楼层房间，读取余额；只读，不代收充值。<br>
+        5. 座位：图书馆页打开座位系统，登录后选座。<br>
+        6. 数据都在本机缓存里；换手机重新填写即可，卸载后清空。
       </div>
       <button class="btn solid" id="helpOk" style="margin-top:12px">知道了</button>
     `);
@@ -1550,6 +1579,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
   $('#openHelp').addEventListener('click', openHelp);
   $('#openThanks').addEventListener('click', openThanks);
   renderVersion();
+  checkAppVersion();
 
   /* ---------- 课程表 ---------- */
   var ST_TXT = {
@@ -2313,141 +2343,251 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     return base;
   }
 
-  /* PDF 导入：按坐标重建表格（仅支持带文字层的 PDF） */
-  var _pdfjs = null;
-  function ensurePdfJs() {
-    if (_pdfjs) return _pdfjs;
-    _pdfjs = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs').then(m => {
-      m.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs';
-      return m;
+  /* ===== 课表文件导入：Word(.docx) =====
+     docx 就是一包 zip，解出 word/document.xml，按 vMerge/gridSpan 读合并单元格。 */
+
+  function periodOfTime(t) {
+    var norm = t && t.length === 4 ? '0' + t : t;
+    var key = Object.keys(PTS.winter).find(k => PTS.winter[k][0] === norm || PTS.winter[k][1] === norm);
+    if (key) return Number(key);
+    var ks = Object.keys(PTS.summer).find(k => PTS.summer[k][0] === norm || PTS.summer[k][1] === norm);
+    return ks ? Number(ks) : 0;
+  }
+
+  /* ---------- docx：解 zip → 读表格 ---------- */
+  function inflateRaw(u8) {
+    return new Promise((res, rej) => {
+      if (typeof DecompressionStream === 'undefined') {
+        rej(new Error('这台设备的 WebView 不支持解压 Word，请改用教务登录导入'));
+        return;
+      }
+      var ds;
+      try {
+        ds = new DecompressionStream('deflate-raw');
+      } catch (e) {
+        rej(new Error('解压组件不可用：' + (e.message || e)));
+        return;
+      }
+      try {
+        var stream = new Blob([u8]).stream().pipeThrough(ds);
+        new Response(stream).arrayBuffer().then(b => res(new Uint8Array(b))).catch(rej);
+      } catch (e) {
+        rej(e);
+      }
     });
-    return _pdfjs;
   }
-  function parsePDFFile(_x) {
-    return _parsePDFFile.apply(this, arguments);
+  function zipIndex(u8) {
+    var len = u8.length;
+    var dv = new DataView(u8.buffer, u8.byteOffset || 0, u8.byteLength);
+    var eocd = -1;
+    for (var i = len - 22; i >= Math.max(0, len - 66000); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) {
+        eocd = i;
+        break;
+      }
+    }
+    if (eocd < 0) throw new Error('这个 .docx 打不开（不是标准 Word 文件）');
+    var count = dv.getUint16(eocd + 10, true);
+    var off = dv.getUint32(eocd + 16, true);
+    var dec = new TextDecoder('utf-8');
+    var map = {};
+    for (var k = 0; k < count && off + 46 <= len; k++) {
+      if (dv.getUint32(off, true) !== 0x02014b50) break;
+      var method = dv.getUint16(off + 10, true);
+      var csize = dv.getUint32(off + 20, true);
+      var nlen = dv.getUint16(off + 28, true);
+      var elen = dv.getUint16(off + 30, true);
+      var clen = dv.getUint16(off + 32, true);
+      var lho = dv.getUint32(off + 42, true);
+      map[dec.decode(u8.subarray(off + 46, off + 46 + nlen))] = {
+        method: method,
+        csize: csize,
+        lho: lho
+      };
+      off += 46 + nlen + elen + clen;
+    }
+    return {
+      dv: dv,
+      map: map,
+      u8: u8
+    };
   }
-  function _parsePDFFile() {
-    _parsePDFFile = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(file) {
-      var pdfjs, buf, doc, out, _loop4, _ret, pg, _t2, _t3;
+  function zipRead(_x, _x2) {
+    return _zipRead.apply(this, arguments);
+  }
+  function _zipRead() {
+    _zipRead = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(zip, name) {
+      var e, nlen, elen, start, raw;
       return _regenerator().w(function (_context7) {
         while (1) switch (_context7.n) {
           case 0:
-            _context7.n = 1;
-            return ensurePdfJs();
+            e = zip.map[name];
+            if (e) {
+              _context7.n = 1;
+              break;
+            }
+            return _context7.a(2, null);
           case 1:
-            pdfjs = _context7.v;
-            _t2 = Uint8Array;
-            _context7.n = 2;
-            return file.arrayBuffer();
+            nlen = zip.dv.getUint16(e.lho + 26, true);
+            elen = zip.dv.getUint16(e.lho + 28, true);
+            start = e.lho + 30 + nlen + elen;
+            raw = zip.u8.subarray(start, start + e.csize);
+            if (!(e.method === 0)) {
+              _context7.n = 2;
+              break;
+            }
+            return _context7.a(2, new Uint8Array(raw));
           case 2:
-            _t3 = _context7.v;
-            buf = new _t2(_t3);
-            _context7.n = 3;
-            return pdfjs.getDocument({
-              data: buf
-            }).promise;
-          case 3:
-            doc = _context7.v;
-            out = [];
-            _loop4 = /*#__PURE__*/_regenerator().m(function _loop4() {
-              var page, tc, items, days, leftX, periods, cellItems, groups;
-              return _regenerator().w(function (_context6) {
-                while (1) switch (_context6.n) {
-                  case 0:
-                    _context6.n = 1;
-                    return doc.getPage(pg);
-                  case 1:
-                    page = _context6.v;
-                    _context6.n = 2;
-                    return page.getTextContent();
-                  case 2:
-                    tc = _context6.v;
-                    items = tc.items.filter(i => i.str && i.str.trim()).map(i => ({
-                      s: i.str.trim(),
-                      x: i.transform[4],
-                      y: i.transform[5]
-                    }));
-                    if (items.length) {
-                      _context6.n = 3;
-                      break;
-                    }
-                    return _context6.a(2, {
-                      v: {
-                        empty: true
-                      }
-                    });
-                  case 3:
-                    days = items.filter(i => /^星期[一二三四五六日]$/.test(i.s));
-                    if (days.length) {
-                      _context6.n = 4;
-                      break;
-                    }
-                    return _context6.a(2, 0);
-                  case 4:
-                    leftX = Math.min(...days.map(d => d.x)) - 30;
-                    periods = items.filter(i => /^第[一二三四五六七八九十]+节$/.test(i.s) && i.x < leftX).sort((a, b) => b.y - a.y);
-                    if (periods.length) {
-                      _context6.n = 5;
-                      break;
-                    }
-                    return _context6.a(2, 0);
-                  case 5:
-                    cellItems = items.filter(i => i.y < days[0].y && i.x >= leftX && !/^第[一二三四五六七八九十]+节$/.test(i.s));
-                    groups = {};
-                    cellItems.forEach(it => {
-                      var day = days.reduce((a, b) => Math.abs(b.x - it.x) < Math.abs(a.x - it.x) ? b : a);
-                      var per = periods.reduce((a, b) => Math.abs(b.y - it.y) < Math.abs(a.y - it.y) ? b : a);
-                      var di = DAY_MAP[day.s.slice(2)];
-                      var pi = CN_NUM[per.s.slice(1, -1)];
-                      var key = di + '_' + pi;
-                      (groups[key] = groups[key] || {
-                        day: di,
-                        p: pi,
-                        items: []
-                      }).items.push(it);
-                    });
-                    Object.values(groups).forEach(g => {
-                      g.items.sort((a, b) => b.y - a.y || a.x - b.x);
-                      var txt = g.items.map(i => i.s).join('\n');
-                      out.push(...cellCourses(txt, g.day, g.p));
-                    });
-                  case 6:
-                    return _context6.a(2);
-                }
-              }, _loop4);
-            });
-            pg = 1;
-          case 4:
-            if (!(pg <= Math.min(doc.numPages, 2))) {
-              _context7.n = 8;
-              break;
-            }
-            return _context7.d(_regeneratorValues(_loop4()), 5);
-          case 5:
-            _ret = _context7.v;
-            if (!(_ret === 0)) {
-              _context7.n = 6;
-              break;
-            }
-            return _context7.a(3, 7);
-          case 6:
-            if (!_ret) {
-              _context7.n = 7;
-              break;
-            }
-            return _context7.a(2, _ret.v);
-          case 7:
-            pg++;
-            _context7.n = 4;
+            return _context7.a(2, inflateRaw(raw));
+        }
+      }, _callee7);
+    }));
+    return _zipRead.apply(this, arguments);
+  }
+  function xmlText(s) {
+    return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  }
+
+  /* docx 行 → 按「网格列」放好的单元格：grid[行][列]，同一跨列单元格在每个列位都放一份，
+     只有 first=true 的那份代表整格，避免重复处理 */
+  function docxRows(tbl) {
+    var rows = [];
+    (tbl.match(/<w:tr[\s>][\s\S]*?<\/w:tr>/g) || []).forEach(rx => {
+      var grid = [];
+      var col = 0;
+      (rx.match(/<w:tc[\s>][\s\S]*?<\/w:tc>/g) || []).forEach(cx => {
+        var span = Number((cx.match(/<w:gridSpan w:val="(\d+)"/) || [])[1] || 1);
+        var vm = cx.match(/<w:vMerge([^>]*)\/?>/);
+        var cont = !!vm && !/w:val="restart"/.test(vm[1] || '');
+        var texts = [];
+        var re = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+        var m;
+        while (m = re.exec(cx)) texts.push(xmlText(m[1]));
+        var cell = {
+          txt: texts.join(''),
+          cont: cont
+        };
+        for (var k = 0; k < span; k++) grid[col + k] = {
+          txt: cell.txt,
+          cont: cell.cont,
+          first: k === 0
+        };
+        col += span;
+      });
+      rows.push(grid);
+    });
+    return rows;
+  }
+
+  /* 单元格里因为换行被塞进多余空格：中文之间、中文与数字之间收紧 */
+  function tidyCell(s) {
+    var t = String(s || '');
+    for (var i = 0; i < 3; i++) {
+      t = t.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2').replace(/([\u4e00-\u9fff])\s+(\d)/g, '$1$2').replace(/(\d)\s+([\u4e00-\u9fff])/g, '$1$2');
+    }
+    return t.trim();
+  }
+
+  /* docx 表格 → 课程；表头行认「星期X」，左列认「第X节 / 时间」，vMerge 决定连堂 */
+  function docxCourses(xml) {
+    var tbls = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) || [];
+    var _loop2 = function _loop2() {
+        var rows = docxRows(tbls[t]);
+        if (!rows.length) return 0; // continue
+        var head = -1;
+        for (var i = 0; i < rows.length && i < 6; i++) {
+          var n = rows[i].filter(c => c && /星期[一二三四五六日天]/.test(c.txt)).length;
+          if (n >= 4) {
+            head = i;
             break;
-          case 8:
-            return _context7.a(2, {
-              list: out
+          }
+        }
+        if (head < 0) return 0; // continue
+        var colDay = rows[head].map(c => {
+          var m = c && c.txt.match(/星期[一二三四五六日天]/);
+          return m ? DAY_MAP[m[0].charAt(2)] : 0;
+        });
+        if (!colDay.some(d => d)) return 0; // continue
+        var rowP = [];
+        rows.forEach((r, ri) => {
+          if (ri <= head) return;
+          var lbl = '';
+          r.forEach((c, ci) => {
+            if (c && c.first && !colDay[ci]) lbl += ' ' + c.txt;
+          });
+          var pm = lbl.match(/第([一二三四五六七八九十]+)节/);
+          var p = pm ? CN_NUM[pm[1]] : 0;
+          if (!p) {
+            var tm = lbl.match(/\d{1,2}:\d{2}/);
+            if (tm) p = periodOfTime(tm[1]);
+          }
+          rowP[ri] = p || ri - head;
+        });
+        var out = [];
+        rows.forEach((r, ri) => {
+          if (ri <= head) return;
+          var p1 = rowP[ri] || ri - head;
+          r.forEach((c, ci) => {
+            var day = colDay[ci];
+            if (!c || !c.first || !day || c.cont) return;
+            var txt = tidyCell(c.txt);
+            if (!txt) return;
+            var p2 = p1;
+            for (var j = ri + 1; j < rows.length; j++) {
+              var cj = rows[j][ci];
+              if (cj && cj.cont) p2 = rowP[j] || p2;else break;
+            }
+            out.push.apply(out, cellCourses(txt, day, p1, p2));
+          });
+        });
+        if (out.length) return {
+          v: out
+        };
+      },
+      _ret;
+    for (var t = 0; t < tbls.length; t++) {
+      _ret = _loop2();
+      if (_ret === 0) continue;
+      if (_ret) return _ret.v;
+    }
+    return [];
+  }
+  function parseDocxFile(_x3) {
+    return _parseDocxFile.apply(this, arguments);
+  }
+  function _parseDocxFile() {
+    _parseDocxFile = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(file) {
+      var u8, zip, bytes, xml, list, _t3, _t4;
+      return _regenerator().w(function (_context8) {
+        while (1) switch (_context8.n) {
+          case 0:
+            _t3 = Uint8Array;
+            _context8.n = 1;
+            return file.arrayBuffer();
+          case 1:
+            _t4 = _context8.v;
+            u8 = new _t3(_t4);
+            zip = zipIndex(u8);
+            _context8.n = 2;
+            return zipRead(zip, 'word/document.xml');
+          case 2:
+            bytes = _context8.v;
+            if (!(!bytes || !bytes.length)) {
+              _context8.n = 3;
+              break;
+            }
+            throw new Error('docx 里没找到正文表格');
+          case 3:
+            xml = new TextDecoder('utf-8').decode(bytes);
+            list = docxCourses(xml);
+            return _context8.a(2, {
+              list: list,
+              empty: !list.length
             });
         }
-      }, _callee6);
+      }, _callee8);
     }));
-    return _parsePDFFile.apply(this, arguments);
+    return _parseDocxFile.apply(this, arguments);
   }
   function parseCourses(text) {
     var raw = (text || '').trim();
@@ -2635,89 +2775,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     $('#courseCount').textContent = `本周 ${Object.values(S.courses).reduce((a, list) => a + list.filter(c => inWeek(c, CUR_WEEK)).length, 0)} 门课`;
   }
 
-  /* ---------- 空闲教室：原生查询（教务 free!search.action，实测 6 列） ---------- */
-  var FREE_CAMPUS = [['', '全部校区'], ['1', '南校区'], ['2', '北校区'], ['22', '郑州校区']];
-  var FREE_TYPE = [['', '全部类型'], ['2', '固定桌椅多媒体'], ['6', '录播教室'], ['1', '同声传译教室'], ['8', '活动桌椅教室'], ['41', '活动桌椅多媒体'], ['3', '普通教室'], ['4', '语音教室'], ['5', '艺术类专用'], ['7', '实验室'], ['21', '体育类专用']];
-  var FREE_BUILDING = [['', '全部教学楼'], ['1', '南校区1号教学楼'], ['2', '南校区2号教学楼'], ['3', '南校区3号教学楼'], ['18', '计算机综合楼'], ['17', '文科综合楼'], ['4', '电气综合楼'], ['5', '机械综合楼'], ['6', '能源综合楼'], ['7', '资环综合楼'], ['8', '测绘综合楼'], ['9', '理化综合楼'], ['12', '土木综合楼'], ['13', '经管综合楼'], ['14', '音乐系'], ['15', '材料综合楼'], ['10', '语音室'], ['23', '综合实验大楼'], ['28', '工程训练中心'], ['61', '安全学院楼'], ['35', '体育馆'], ['31', '东区体育场'], ['32', '西区体育场'], ['20', '东区体育场地'], ['21', '西区体育场地'], ['24', '北区体育场'], ['36', '北校区1号教学楼'], ['37', '北校区2号教学楼'], ['101', '郑州校区教学楼'], ['102', '郑州校区实验楼'], ['103', '郑州校区干训楼'], ['104', '郑州校区体育场地']];
-  function frFill(sel, list) {
-    var el = $(sel);
-    if (!el) return;
-    el.innerHTML = list.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
-  }
-  frFill('#frCampus', FREE_CAMPUS);
-  frFill('#frBuilding', FREE_BUILDING);
-  frFill('#frType', FREE_TYPE);
-  $('#frCampus').value = '1';
-  var frPad = n => String(n).padStart(2, '0');
-  var frToday = () => {
-    var d = new Date();
-    return `${d.getFullYear()}-${frPad(d.getMonth() + 1)}-${frPad(d.getDate())}`;
-  };
-  $('#frDate').value = frToday();
-  $('#frOpen').addEventListener('click', () => openHosted(LINKS.free, '空闲教室查询'));
-  function frRun() {
-    return _frRun.apply(this, arguments);
-  }
-  function _frRun() {
-    _frRun = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
-      var date, from, to, btn, _t4;
-      return _regenerator().w(function (_context8) {
-        while (1) switch (_context8.p = _context8.n) {
-          case 0:
-            if (!(!window.hpu || !window.hpu.freeFilters)) {
-              _context8.n = 1;
-              break;
-            }
-            openHosted(LINKS.free, '空闲教室查询');
-            return _context8.a(2);
-          case 1:
-            date = $('#frDate').value || frToday();
-            from = $('#frFrom').value || '08:00', to = $('#frTo').value || '09:40';
-            if (!(from >= to)) {
-              _context8.n = 2;
-              break;
-            }
-            toast('结束时间要晚于开始时间');
-            return _context8.a(2);
-          case 2:
-            btn = $('#frQuery');
-            btn.disabled = true;
-            btn.textContent = '打开中…';
-            $('#frNote').textContent = '正在打开教务的空闲教室页…';
-            _context8.p = 3;
-            _context8.n = 4;
-            return window.hpu.freeFilters({
-              campus: $('#frCampus').value,
-              building: $('#frBuilding').value,
-              type: $('#frType').value,
-              seats: $('#frCap').value,
-              date,
-              from,
-              to
-            });
-          case 4:
-            $('#frNote').textContent = '已打开教务的空闲教室页，条件已填好；在页面里点「查询」看结果。学校的空闲教室接口只顾校区/教学楼/类型/容量，日期时段条件经常不生效（网页自身问题），以页面返回为准。';
-            _context8.n = 6;
-            break;
-          case 5:
-            _context8.p = 5;
-            _t4 = _context8.v;
-            $('#frNote').textContent = '打开失败：' + (_t4 && _t4.message || _t4);
-          case 6:
-            _context8.p = 6;
-            btn.disabled = false;
-            btn.textContent = '查询';
-            return _context8.f(6);
-          case 7:
-            return _context8.a(2);
-        }
-      }, _callee7, null, [[3, 5, 6, 7]]);
-    }));
-    return _frRun.apply(this, arguments);
-  }
-  $('#frQuery').addEventListener('click', frRun);
-
-  // 周条 / 日期
+  /* 周条 / 日期 */
   var today = new Date();
   var isoIdx = (today.getDay() + 6) % 7;
   var monday = new Date(today);
@@ -2747,7 +2805,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     var labels = '';
     for (var p = 1; p <= 11; p++) labels += `<div class="plabel${p >= 10 ? ' eve' : ''}"><b>${p}</b><span>${PT[p][0]}</span></div>`;
     var cols = '';
-    var _loop2 = function _loop2() {
+    var _loop3 = function _loop3() {
       var slots = activeCourses(day, curWeek).map(c => _objectSpread({
         c
       }, periodOf(c)));
@@ -2773,7 +2831,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
       cols += `<div class="daycol" data-day="${day}">${blocks}</div>`;
     };
     for (var day = 1; day <= 7; day++) {
-      _loop2();
+      _loop3();
     }
     $('#gridBody').innerHTML = `<div class="pcol">${labels}</div>` + cols;
     var cnt = Object.values(S.courses).reduce((a, list) => a + list.filter(c => inWeek(c, curWeek) && !S.hidden.includes(courseKey(c))).length, 0);
@@ -3026,7 +3084,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     if (!show.length) {
       openSheet(`
         <h3>${title}</h3>
-        <div class="notice">这一格没有课，可以来自习或查空教室。</div>
+        <div class="notice">这一格没有课。</div>
         <button class="btn ghost" data-close>关闭</button>`);
       return;
     }
@@ -3242,7 +3300,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     return _syncGrades.apply(this, arguments);
   }
   function _syncGrades() {
-    _syncGrades = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+    _syncGrades = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
       var btn, r, rows, _t5;
       return _regenerator().w(function (_context9) {
         while (1) switch (_context9.p = _context9.n) {
@@ -3297,7 +3355,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
           case 8:
             return _context9.a(2);
         }
-      }, _callee8, null, [[2, 6, 7, 8]]);
+      }, _callee9, null, [[2, 6, 7, 8]]);
     }));
     return _syncGrades.apply(this, arguments);
   }
@@ -3561,14 +3619,14 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
       if (miss.length) warns.push(`${c.n}：缺 ${miss.join('、')}`);
     });
     var coll = [];
-    var _loop3 = function _loop3(d) {
+    var _loop4 = function _loop4(d) {
       var dayC = norm.filter(c => c.day === d);
       dayC.forEach((a, i) => dayC.slice(i + 1).forEach(b => {
         if (a.p1 <= b.p2 && a.p2 >= b.p1 && weeksOverlap(a, b)) coll.push(`${'周' + '一二三四五六日'[d - 1]} ${a.n} / ${b.n}`);
       }));
     };
     for (var d = 1; d <= 7; d++) {
-      _loop3(d);
+      _loop4(d);
     }
     var byDay = {};
     norm.forEach(c => {
@@ -3716,23 +3774,31 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     rd.readAsText(f);
   });
 
-  /* ---------- 课表导入：PDF / 网页，不再走文本粘贴 ---------- */
+  /* ---------- 课表导入：Word / JSON / 教务登录 ---------- */
   function openCourseImport() {
     openSheet(`
       <h3>导入课表</h3>
-      <div class="notice">点下面的按钮打开教务，登录后进入「个人课表」，点页面上的导入按钮（或长按复制），App 收到数据会自动回到课程表页并提示完成。</div>
-      <button class="btn solid" id="inAppLogin">① 打开教务并登录</button>
+
+      <div class="notice">推荐：把教务课表转成 Word 文件导入（步骤见下方）</div>
+      <button class="btn solid" id="pickDoc">导入课表 Word（.docx）</button>
+      <input type="file" id="docFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none">
+
+      <button class="btn ghost" id="pickJson" style="margin-top:10px">导入课表 JSON</button>
+      <input type="file" id="jsonFile" accept=".json,application/json" style="display:none">
+
+      <div class="notice" style="margin-top:14px">或直接在教务系统登录，自动取回课表</div>
+      <button class="btn ghost" id="inAppLogin">① 打开教务并登录</button>
       <div class="notice" id="jwStatus">等待教务回传…</div>
-      <div class="notice" style="margin-top:14px">手机备选：长按课表 → 全选 → 复制 → 粘到这里</div>
-      <textarea id="pasteBox" class="syncta" placeholder="粘贴教务课表复制的内容（保留换行即可）"></textarea>
-      <button class="btn ghost" id="pasteImport" style="margin-top:10px">解析粘贴内容</button>
-      <div class="notice" style="margin-top:16px">其他来源（推荐网页文件：电脑打开教务「个人课表」→ Ctrl+S 存为 html，再传到这里）</div>
-      <button class="btn ghost" id="pickPdf">导入课表 PDF</button>
-      <input type="file" id="pdfFile" accept=".pdf,application/pdf" style="display:none">
-      <button class="btn ghost" id="pickHtml" style="margin-top:10px">导入网页文件 / JSON</button>
-      <input type="file" id="htmlFile" accept=".html,.htm,.json,text/html,application/json" style="display:none">
-      <button class="btn ghost" id="dlTm" style="margin-top:10px">下载油猴脚本（电脑端一键抓取）</button>
-      <div class="notice">教务禁止被第三方页面嵌入，网页原型读不到其页面内容；原生 App 的 WebView 壳可在应用内登录、注入读取并自动回传。</div>
+
+      <div class="notice" style="margin-top:16px">Word 课表怎么取（分步）</div>
+      <div style="font-size:12px;line-height:2;color:var(--text)">
+        <b>1.</b> 电脑或手机浏览器登录教务系统，进入「个人课表」<br>
+        <b>2.</b> 页面右上角「打印 / 另存为 PDF」，把课表导出成 PDF<br>
+        <b>3.</b> 用 WPS（或在线转换工具）打开这份 PDF，另存为 .docx（Word）<br>
+        <b>4.</b> 把 Word 文件传回手机：微信 / QQ / 网盘 / 邮箱均可<br>
+        <b>5.</b> 回到本页，点「导入课表 Word」选中文件，预览确认后导入
+      </div>
+      <div class="notice">扫描件、图片版 PDF 读不出文字；转成 Word 后识别最稳。</div>
     `);
     var done = list => {
       if (list && list.length) {
@@ -3741,30 +3807,30 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
         });
       } else toast('没有解析出课程，检查一下文件');
     };
-    $('#pickPdf').addEventListener('click', () => $('#pdfFile').click());
-    $('#pdfFile').addEventListener('change', /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+    $('#pickDoc').addEventListener('click', () => $('#docFile').click());
+    $('#docFile').addEventListener('change', /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       var f, res, _t;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.p = _context.n) {
           case 0:
-            f = $('#pdfFile').files[0];
+            f = $('#docFile').files[0];
             if (f) {
               _context.n = 1;
               break;
             }
             return _context.a(2);
           case 1:
-            toast('正在解析 PDF…');
+            toast('正在读取 Word 表格…');
             _context.p = 2;
             _context.n = 3;
-            return parsePDFFile(f);
+            return parseDocxFile(f);
           case 3:
             res = _context.v;
             if (!res.empty) {
               _context.n = 4;
               break;
             }
-            toast('这份 PDF 是图片版，没有文字层，请用网页导入');
+            toast('Word 里没找到课表表格，确认是教务导出的「个人课程表」');
             return _context.a(2);
           case 4:
             done(res.list);
@@ -3773,72 +3839,32 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
           case 5:
             _context.p = 5;
             _t = _context.v;
-            toast('PDF 解析失败：' + (_t.message || '网络或格式问题'));
+            toast('Word 解析失败：' + (_t.message || '格式问题'));
           case 6:
             return _context.a(2);
         }
       }, _callee, null, [[2, 5]]);
     })));
-    $('#pickHtml').addEventListener('click', () => $('#htmlFile').click());
-    $('#htmlFile').addEventListener('change', () => {
-      var f = $('#htmlFile').files[0];
+    $('#pickJson').addEventListener('click', () => $('#jsonFile').click());
+    $('#jsonFile').addEventListener('change', () => {
+      var f = $('#jsonFile').files[0];
       if (!f) return;
       var rd = new FileReader();
       rd.onload = () => {
-        var txt = String(rd.result || '');
-        if (/\.json$/i.test(f.name)) {
-          try {
-            var data = JSON.parse(txt);
-            done(Array.isArray(data) ? data : data.courses || []);
-          } catch (e) {
-            toast('JSON 解析失败');
-          }
-          return;
+        try {
+          var data = JSON.parse(String(rd.result || ''));
+          done(Array.isArray(data) ? data : data.courses || []);
+        } catch (e) {
+          toast('JSON 解析失败');
         }
-        // 教务页面常是 GBK，UTF-8 读出来是乱码时再按 GBK 读一次
-        if (/[\uFFFD]/.test(txt)) {
-          var rd2 = new FileReader();
-          rd2.onload = () => done(parseEamsHTML(String(rd2.result || '')));
-          try {
-            rd2.readAsText(f, 'gbk');
-          } catch (e) {
-            done(parseEamsHTML(txt));
-          }
-          return;
-        }
-        done(parseEamsHTML(txt));
       };
       rd.readAsText(f, 'utf-8');
     });
 
-    // App 内登录：先弹统一认证层（演示）；壳内登录态会交给应用内网页
+    // App 内登录：先弹统一认证层；壳内登录态会交给应用内网页
     $('#inAppLogin').addEventListener('click', () => {
       closeSheet();
       openLogin();
-    });
-    $('#pasteImport').addEventListener('click', () => {
-      var txt = $('#pasteBox').value;
-      var list = parseCourses(txt);
-      if (!list || !list.length) {
-        toast('没识别出课程：请连同「周一/第X节」一起复制');
-        return;
-      }
-      previewCourses(list, {
-        replace: true
-      });
-    });
-    $('#dlTm').addEventListener('click', () => {
-      var meta = ['// ==UserScript==', '// @name         校园助手·课表一键导入', '// @version      1.0', '// @description  河南理工教务课表页注入悬浮按钮，一键回传到校园助手', '// @match        https://zhjw.hpu.edu.cn/eams/courseTableForStd*', '// @match        http://zhjw.hpu.edu.cn/eams/courseTableForStd*', '// @match        https://webvpn.hpu.edu.cn/*courseTableForStd*', '// @grant        none', '// ==/UserScript==', ''].join('\n');
-      var code = ($('#bmCode').textContent || '').trim().replace(/^javascript:/, '');
-      var blob = new Blob([meta + code], {
-        type: 'text/javascript;charset=utf-8'
-      });
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = '校园助手课表导入.user.js';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      toast('脚本已下载，双击安装到油猴');
     });
   }
 
@@ -3919,7 +3945,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     return _pwLoadBuildings.apply(this, arguments);
   }
   function _pwLoadBuildings() {
-    _pwLoadBuildings = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+    _pwLoadBuildings = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
       var r, saved, rf, rr, _t6;
       return _regenerator().w(function (_context0) {
         while (1) switch (_context0.p = _context0.n) {
@@ -3997,7 +4023,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
           case 8:
             return _context0.a(2);
         }
-      }, _callee9, null, [[1, 7]]);
+      }, _callee0, null, [[1, 7]]);
     }));
     return _pwLoadBuildings.apply(this, arguments);
   }
@@ -4124,7 +4150,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     return _pwQuery.apply(this, arguments);
   }
   function _pwQuery() {
-    _pwQuery = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
+    _pwQuery = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1() {
       var btn, r, allRows;
       return _regenerator().w(function (_context1) {
         while (1) switch (_context1.p = _context1.n) {
@@ -4184,7 +4210,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
           case 7:
             return _context1.a(2);
         }
-      }, _callee0, null, [[3,, 6, 7]]);
+      }, _callee1, null, [[3,, 6, 7]]);
     }));
     return _pwQuery.apply(this, arguments);
   }
@@ -4566,7 +4592,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     return _casFetchCourses.apply(this, arguments);
   }
   function _casFetchCourses() {
-    _casFetchCourses = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1() {
+    _casFetchCourses = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
       var r, list;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.n) {
@@ -4604,7 +4630,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
             });
             return _context10.a(2, true);
         }
-      }, _callee1);
+      }, _callee10);
     }));
     return _casFetchCourses.apply(this, arguments);
   }
@@ -4612,7 +4638,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     return _shellLogin.apply(this, arguments);
   }
   function _shellLogin() {
-    _shellLogin = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
+    _shellLogin = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11() {
       var btn, ok, _t7;
       return _regenerator().w(function (_context11) {
         while (1) switch (_context11.p = _context11.n) {
@@ -4640,7 +4666,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
           case 5:
             return _context11.a(2);
         }
-      }, _callee10, null, [[1, 3, 4, 5]]);
+      }, _callee11, null, [[1, 3, 4, 5]]);
     }));
     return _shellLogin.apply(this, arguments);
   }
@@ -4768,11 +4794,11 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
     $('#wxDesc').textContent = label;
     box.hidden = false;
   }
-  function refreshWeather(_x2) {
+  function refreshWeather(_x4) {
     return _refreshWeather.apply(this, arguments);
   }
   function _refreshWeather() {
-    _refreshWeather = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(force) {
+    _refreshWeather = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(force) {
       var cached, url, r, j, cur, o, _t8;
       return _regenerator().w(function (_context12) {
         while (1) switch (_context12.p = _context12.n) {
@@ -4825,7 +4851,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
           case 6:
             return _context12.a(2);
         }
-      }, _callee11, null, [[1, 5]]);
+      }, _callee12, null, [[1, 5]]);
     }));
     return _refreshWeather.apply(this, arguments);
   }
@@ -4836,6 +4862,7 @@ function _iterableToArrayLimit(r, t) { var e = null == r ? null : "undefined" !=
   /* 调试钩子：解析器可在控制台复核 */
   window.__campusParse = {
     eams: parseEamsHTML,
+    docx: parseDocxFile,
     cell: cellCourses,
     periods: PT,
     preview: previewCourses,
