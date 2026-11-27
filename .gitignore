@@ -1,0 +1,15 @@
+# 依赖与构建产物（体积大、可再生成）
+hpu-shell/node_modules/
+android/.gradle/
+android/build/
+android/app/build/
+*.iml
+.gradle/
+
+# 本机调试产物
+hpu-shell/debug/
+*.bak
+
+# 签名与密钥，绝不能进仓库
+*.jks
+*.keystore

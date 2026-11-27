@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 学校几个站点仍是 http / 端口不固定，这里整体放行明文；个人自用、不上架 -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">hpu.edu.cn</domain>
+        <domain includeSubdomains="true">183.169.255.4</domain>
+        <domain includeSubdomains="true">pay.hpu.edu.cn</domain>
+    </domain-config>
+</network-security-config>
