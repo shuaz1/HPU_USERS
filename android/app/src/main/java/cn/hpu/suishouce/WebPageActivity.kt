@@ -222,9 +222,7 @@ class WebPageActivity : Activity() {
             if (isEamsHome(at)) {
                 stage = 1
                 toast("登录成功，正在打开课表…")
-                handler.postDelayed({
-                    if (!sent && !isFinishing) web.loadUrl(TABLE_URL)
-                }, 900)
+                handler.postDelayed({ extractHomeTableTarget() }, 900)
             }
             return
         }
@@ -233,6 +231,54 @@ class WebPageActivity : Activity() {
             pollTable(0)
         }
     }
+
+    /**
+     * 教务课表页必须带学期 id，否则服务端抛 “id to load is required for loading”。
+     * 先在首页 DOM 里找课表链接 / 学期下拉，拼成带参数的地址再跳转。
+     */
+    private fun extractHomeTableTarget() {
+        if (sent || isFinishing) return
+        web.evaluateJavascript(homeFindJs()) { raw ->
+            if (sent) return@evaluateJavascript
+            val s = unquote(raw)
+            var href = ""
+            var sid = ""
+            try {
+                val j = JSONObject(s)
+                href = j.optString("href")
+                sid = j.optString("semesterId")
+            } catch (_: Exception) { }
+
+            val target = when {
+                href.startsWith("http") -> href
+                href.isNotEmpty() -> resolveHref(href)
+                sid.isNotEmpty() -> "$TABLE_URL?semesterId=$sid&setting.kind=std&ignoreHead=1"
+                else -> TABLE_ALT
+            }
+            Log.d("HpuLogin", "table target=$target")
+            web.loadUrl(target)
+        }
+    }
+
+    private fun resolveHref(href: String): String {
+        return when {
+            href.startsWith("http") -> href
+            href.startsWith("/") -> "https://zhjw.hpu.edu.cn" + href
+            else -> "https://zhjw.hpu.edu.cn/" + href
+        }
+    }
+
+    private fun homeFindJs(): String =
+        "(function(){" +
+            "var fromEls=function(sel){return Array.prototype.slice.call(document.querySelectorAll(sel)).map(function(el){return el.getAttribute('href')||el.getAttribute('action')||'';}).filter(function(u){return /courseTableForStd/i.test(u);});};" +
+            "var hit=fromEls('a')[0]||fromEls('form')[0]||'';" +
+            "if(!hit){var src=document.documentElement.innerHTML;var m=src.match(/[\\/a-zA-Z0-9_.!?&=%-]*courseTableForStd[A-Za-z0-9_.!?&=%-]*/);if(m)hit=m[0];}" +
+            "var sid='';" +
+            "var sels=Array.prototype.slice.call(document.querySelectorAll('select'));" +
+            "for(var i=0;i<sels.length;i++){var n=((sels[i].name||'')+' '+(sels[i].id||'')).toLowerCase();if(n.indexOf('semester')>=0||n.indexOf('term')>=0){var o=sels[i].querySelector('option[selected]')||sels[i].options[sels[i].selectedIndex];sid=(o&&o.value)||'';break;}}" +
+            "if(!sid){var all=document.documentElement.innerHTML;var mm=all.match(/semester[Ii]d=(\\d+)/);if(mm)sid=mm[1];}" +
+            "return JSON.stringify({href:hit,semesterId:sid});" +
+        "})()"
 
     /** 课表是页面里的 JS 画出来的，等它真的渲染出「星期/周一…」再抓 */
     private fun pollTable(tries: Int) {
@@ -257,13 +303,13 @@ class WebPageActivity : Activity() {
         when (altTry) {
             0 -> {
                 altTry = 1
-                toast("课表没渲染出来，换个地址再试…")
-                web.loadUrl(TABLE_ALT)
+                toast("课表没渲染出来，先下课表查询页…")
+                web.loadUrl(TABLE_INDEX)
             }
             1 -> {
                 altTry = 2
-                toast("再试课表查询页…")
-                web.loadUrl(TABLE_INDEX)
+                toast("再试带参数地址…")
+                web.loadUrl(TABLE_ALT)
             }
             else -> {
                 sent = true
