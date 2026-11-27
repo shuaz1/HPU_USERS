@@ -12,6 +12,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import org.json.JSONObject
 import org.json.JSONTokener
 
@@ -26,6 +27,10 @@ class WebPageActivity : Activity() {
 
     companion object {
         const val GRADE_URL = "https://zhjw.hpu.edu.cn/eams/teach/grade/course/std-grade-modify-apply.action"
+        // 课表真身在独立的课表页，教务首页里没有课表；登录完必须跳过去抓
+        const val TABLE_URL = "https://zhjw.hpu.edu.cn/eams/courseTableForStd!courseTable.action"
+        const val TABLE_ALT = "https://zhjw.hpu.edu.cn/eams/courseTableForStd!courseTable.action?setting.kind=std&ignoreHead=1"
+        const val TABLE_INDEX = "https://zhjw.hpu.edu.cn/eams/courseTableForStd!index.action"
 
         fun start(act: Activity, url: String, title: String, mode: String, ua: String, prefill: String) {
             val i = Intent(act, WebPageActivity::class.java)
@@ -44,6 +49,8 @@ class WebPageActivity : Activity() {
     private var scraperLoaded = false
     private var prefill = ""
     private var fillTries = 0
+    private var stage = 0          // 0=等登录落地  1=已到教务首页，准备跳课表  2=已在课表页
+    private var altTry = 0          // 课表页三种地址的重试计数
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,7 +91,7 @@ class WebPageActivity : Activity() {
             override fun onPageFinished(view: WebView?, u: String?) {
                 val at = u ?: return
                 when (mode) {
-                    "login" -> if (!sent && isEamsHome(at)) captureHtml(at)
+                    "login" -> handleLogin(at)
                     "grades" -> if (!scraperLoaded) { scraperLoaded = true; loadScraper() }
                     "free" -> scheduleFill(at)
                 }
@@ -105,6 +112,86 @@ class WebPageActivity : Activity() {
 
     private fun isEamsHome(url: String) =
         Regex("zhjw\\.hpu\\.edu\\.cn/eams/home(Ext)?\\.action", RegexOption.IGNORE_CASE).containsMatchIn(url)
+
+    /**
+     * 登录流程分两步：先在认证页登录、落回教务首页；再跳到课表页，等课表渲染完才抓。
+     * 直接抓首页会拿到没有课表的空页面（这就是上一版"很快回到 App 却没数据"的原因）。
+     */
+    private fun handleLogin(at: String) {
+        if (sent) return
+        if (stage == 0) {
+            if (isEamsHome(at)) {
+                stage = 1
+                toast("登录成功，正在打开课表…")
+                handler.postDelayed({
+                    if (!sent && !isFinishing) web.loadUrl(TABLE_URL)
+                }, 900)
+            }
+            return
+        }
+        if (at.contains("courseTableForStd")) {
+            stage = 2
+            pollTable(0)
+        }
+    }
+
+    /** 课表是页面里的 JS 画出来的，等它真的渲染出「星期/周一…」再抓 */
+    private fun pollTable(tries: Int) {
+        if (sent) return
+        val js = "(function(){var h=document.documentElement.outerHTML||'';" +
+            "return h.length+'@'+(/(星期|周[一二三四五六日天])/.test(h)?'1':'0')})()"
+        web.evaluateJavascript(js) { raw ->
+            if (sent) return@evaluateJavascript
+            val res = unquote(raw)
+            if (res.endsWith("@1")) {
+                captureHtml(web.url ?: "")
+            } else if (tries < 8) {
+                handler.postDelayed({ pollTable(tries + 1) }, 700)
+            } else {
+                tryAlt()
+            }
+        }
+    }
+
+    private fun tryAlt() {
+        if (sent) return
+        when (altTry) {
+            0 -> {
+                altTry = 1
+                toast("课表没渲染出来，换个地址再试…")
+                web.loadUrl(TABLE_ALT)
+            }
+            1 -> {
+                altTry = 2
+                toast("再试课表查询页…")
+                web.loadUrl(TABLE_INDEX)
+            }
+            else -> {
+                sent = true
+                HpuBridge.deliver(
+                    JSONObject().put("ok", false)
+                        .put("reason", "课表页里没读到课程表（可能这学期还没排课，或页面改版）")
+                        .toString()
+                )
+                finish()
+            }
+        }
+    }
+
+    private fun toast(msg: String) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onDestroy() {
+        if (mode == "login" && !sent) {
+            sent = true
+            HpuBridge.deliver(
+                JSONObject().put("ok", false).put("reason", "登录窗口已关闭，没有抓到课表").toString()
+            )
+        }
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
 
     /** 把当前页整份 HTML 交回主页面（课表解析在网页那侧做） */
     private fun captureHtml(at: String) {
