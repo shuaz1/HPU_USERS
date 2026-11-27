@@ -37,6 +37,9 @@ class WebPageActivity : Activity() {
         const val TABLE_ALT = "https://zhjw.hpu.edu.cn/eams/courseTableForStd!courseTable.action?setting.kind=std&ignoreHead=1"
         const val TABLE_INDEX = "https://zhjw.hpu.edu.cn/eams/courseTableForStd!index.action"
 
+        /** 默认用电脑标识的站点：只有教务系统 */
+        val DESKTOP_HOSTS = listOf("zhjw.hpu.edu.cn")
+
         fun start(act: Activity, url: String, title: String, mode: String, ua: String, prefill: String) {
             val i = Intent(act, WebPageActivity::class.java)
             i.putExtra("url", url)
@@ -58,6 +61,9 @@ class WebPageActivity : Activity() {
     private var fillTries = 0
     private var stage = 0          // 0=等登录落地  1=已到教务首页，准备跳课表  2=已在课表页
     private var altTry = 0          // 课表页三种地址的重试计数
+    private var entryUrl = ""        // 打开时的入口地址，切 UA 重载用
+    private var curUrl = ""          // 当前真实地址
+    private var blankTold = ""       // 已提示过空白的地址，避免反复弹
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,13 +76,15 @@ class WebPageActivity : Activity() {
         val url = intent.getStringExtra("url") ?: "about:blank"
         val ua = intent.getStringExtra("ua") ?: "auto"
 
-        // 学校站点默认用电脑标识：手机版页面经常残缺，课表/成绩页本来就是按电脑排的；
-        // 只有图书馆座位（seatlib）是按手机竖屏做的，保持手机 UA
+        // 只有教务系统（zhjw）本来就是按电脑排版的，才默认用电脑标识；
+        // 图书馆座位、微后勤、缴费、办事大厅这些都是移动端页面，用电脑标识会被塞进小屏，
+        // 出现错位、白屏、“像没加载出来”的情况。剩下的一律跟随手机默认 UA。
         desktopMode = when (ua) {
             "mobile" -> false
             "desktop" -> true
-            else -> !Regex("seatlib\\.hpu\\.edu\\.cn").containsMatchIn(url)
+            else -> DESKTOP_HOSTS.any { url.contains(it) }
         }
+        entryUrl = url
 
         val root = LinearLayout(this)
         root.orientation = LinearLayout.VERTICAL
@@ -110,15 +118,27 @@ class WebPageActivity : Activity() {
             override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean = false
             override fun shouldOverrideUrlLoading(view: WebView, u: String): Boolean = false
 
+            override fun onPageStarted(view: WebView?, u: String?, favicon: android.graphics.Bitmap?) {
+                if (u != null) curUrl = u
+            }
+
             override fun onPageFinished(view: WebView?, u: String?) {
                 val at = u ?: return
-                if (desktopMode) forceDesktopViewport()
+                curUrl = at
+                // 不再强行改页面 viewport：WebView 自带的自适应排版（useWideViewPort + overview）
+                // 就够用，硬塞 width=1280 反而把手机页面按桌面宽度重排，错位、白屏
                 when (mode) {
                     "login" -> handleLogin(at)
                     "grades" -> if (!scraperLoaded) { scraperLoaded = true; loadScraper() }
                     "free" -> scheduleFill(at)
                 }
                 checkNotBlank(at)
+            }
+
+            override fun onReceivedError(
+                view: WebView?, errorCode: Int, description: String?, failingUrl: String?
+            ) {
+                toast("加载失败：" + (description ?: "网络错误") + "\n可点左上角切换电脑版/手机版再试")
             }
         }
 
@@ -165,35 +185,35 @@ class WebPageActivity : Activity() {
         desktopMode = !desktopMode
         uaBtn?.text = if (desktopMode) "电脑版" else "手机版"
         applyUa(true)
-        toast(if (desktopMode) "已切换为电脑版" else "已切换为手机版")
+        toast(if (desktopMode) "已切换为电脑版，正在重新加载" else "已切换为手机版，正在重新加载")
     }
 
     private fun applyUa(reload: Boolean) {
         web.settings.userAgentString = if (desktopMode) Http.DESKTOP_UA else WebSettings.getDefaultUserAgent(this)
-        if (reload) {
-            web.clearCache(false)
-            web.reload()
-        }
+        if (!reload) return
+        // 光 reload 会沿用上一次用旧 UA 取到的渲染结果，先清缓存再从头请求
+        val target = if (curUrl.isNotEmpty() && !curUrl.startsWith("about:")) curUrl else entryUrl
+        web.stopLoading()
+        web.clearCache(true)
+        web.loadUrl("about:blank")
+        handler.postDelayed({
+            if (!isFinishing) web.loadUrl(target)
+        }, 150)
     }
 
-    /** 电脑标识还不够：很多教务页没有 viewport，会按 980px 排版；这里强制按 1280 宽排 */
-    private fun forceDesktopViewport() {
-        web.evaluateJavascript(
-            "(function(){var m=document.querySelector('meta[name=viewport]');" +
-                "if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}" +
-                "m.content='width=1280';return 1})()", null
-        )
-    }
-
-    /** 整页几乎没文字时提示一下，免得用户在空白页干等 */
+    /** 整页几乎没文字时提示一下，免得用户在空白页干等（同一地址只提示一次） */
     private fun checkNotBlank(at: String) {
+        if (at == blankTold) return
         handler.postDelayed({
             if (isFinishing || sent) return@postDelayed
             web.evaluateJavascript(
                 "(function(){var b=document.body;return b?b.innerText.replace(/\\s/g,'').length:0})()"
             ) { raw ->
                 val n = unquote(raw).toIntOrNull() ?: 0
-                if (n < 20) toast("页面像是空白的，可点左上角切「手机版」再试")
+                if (n < 20 && at != blankTold) {
+                    blankTold = at
+                    toast("这页没渲染出内容，可点左上角切「电脑版/手机版」再试")
+                }
             }
         }, 1500)
     }
